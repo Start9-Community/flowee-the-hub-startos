@@ -1,158 +1,276 @@
+<p align="center">
+  <img src="icon.png" alt="Flowee the Hub Logo" width="21%" />
+</p>
+
 # Flowee the Hub on StartOS
 
-> Upstream repo: [https://codeberg.org/Flowee/thehub](https://codeberg.org/Flowee/thehub)
+> **Upstream docs:** <https://flowee.org/docs/hub/> · <https://codeberg.org/Flowee/thehub>
+>
+> Everything not listed in this document should behave the same as upstream Flowee the Hub. If a
+> feature, setting, or behavior is not mentioned here, the upstream documentation is accurate and
+> fully applicable.
 
-A Bitcoin Cash full node implementation for StartOS. Flowee the Hub provides fast block propagation
-and relay capabilities with SPV-level validation.
+Flowee the Hub is a headless Bitcoin Cash full node derived from the original Satoshi codebase. It
+relays blocks with thin-block compression, serves JSON-RPC, and speaks Flowee's own binary
+protocol. The package also runs the `indexer` daemon that ships with the Hub, which builds a
+transaction lookup database alongside the chain.
 
-## Getting Started
-
-To learn how to package services for StartOS, see the [Packaging Guide](https://docs.start9.com/packaging).
+---
 
 ## Table of Contents
 
-- Image and Container Runtime
-- Volume and Data Layout
-- Installation and First-Run Flow
-- Configuration Management
-- Network Access and Interfaces
-- Actions (StartOS UI)
-- Backups and Restore
-- Health Checks
-- Dependencies
-- Mining Considerations
-- Limitations and Differences
-- Contributing
+1. [Image and Container Runtime](#image-and-container-runtime)
+2. [Volume and Data Layout](#volume-and-data-layout)
+3. [Installation and First-Run Flow](#installation-and-first-run-flow)
+4. [Configuration Management](#configuration-management)
+5. [Network Access and Interfaces](#network-access-and-interfaces)
+6. [Actions (StartOS UI)](#actions-startos-ui)
+7. [Backups and Restore](#backups-and-restore)
+8. [Health Checks](#health-checks)
+9. [Dependencies](#dependencies)
+10. [Limitations and Differences](#limitations-and-differences)
+11. [What Is Unchanged from Upstream](#what-is-unchanged-from-upstream)
+12. [Contributing](#contributing)
+13. [Quick Reference for AI Consumers](#quick-reference-for-ai-consumers)
+
+---
 
 ## Image and Container Runtime
 
-| Property       | Value                                  |
-|----------------|----------------------------------------|
-| Image          | Built from source (codeberg.org/Flowee/thehub) |
-| Architectures  | x86_64                                 |
-| Command        | `hub`                                  |
-| CLI            | `hub-cli`                              |
+| Field             | Value                                                                                                   |
+| ----------------- | ------------------------------------------------------------------------------------------------------- |
+| **Image ID**      | `flowee`                                                                                                |
+| **Source**        | Custom `Dockerfile` — a builder stage compiles `hub`, `hub-cli` and `indexer` from the upstream tarball |
+| **Upstream pin**  | `VERSION` (tag) and `COMMIT` (immutable archive) build args in the manifest; `COMMIT` is authoritative  |
+| **Architectures** | `x86_64`, `aarch64`                                                                                     |
+| **Entrypoint**    | Replaced — the package runs `hub` and `indexer` as two daemons in one subcontainer                      |
+
+Upstream publishes neither release binaries nor a container image, so the package builds them. The
+builder stage needs OpenSSL, libevent, miniupnpc, Boost and Qt 6; the runtime stage carries only
+the shared libraries those produce, plus `e2fsprogs` for `chattr`.
 
 ## Volume and Data Layout
 
-| Volume | Mount   | Purpose         |
-|--------|---------|-----------------|
-| main   | `/data` | Persistent data |
+| Volume | Mount point | Purpose                                              |
+| ------ | ----------- | ---------------------------------------------------- |
+| `main` | `/data`     | Chain data, the transaction index, and configuration |
+
+Inside `/data`:
+
+| Path                       | Written by      | Purpose                                                                |
+| -------------------------- | --------------- | ---------------------------------------------------------------------- |
+| `flowee.conf`              | StartOS         | The Hub's configuration, generated from the configuration actions      |
+| `store.json`               | StartOS         | Package state: selected network, privacy toggles, reindex flag         |
+| `.cookie`                  | Hub             | Auth token the package's own `hub-cli` calls use                        |
+| `blocks/`                  | Hub             | Raw block files and the block index                                    |
+| `unspent/`                 | Hub             | The UTXO database — Flowee's own format, not interchangeable with BCHN |
+| `txindex/`                 | Indexer         | The transaction lookup database                                        |
+| `peers.dat`, `banlist.dat` | Hub             | Peer address cache and ban list                                        |
+| `hub.log`                  | Hub             | Node log                                                               |
+| `testnet3/`, `chipnet/`, … | Hub             | One subdirectory per test network, with the same layout                |
+
+The `nocow` oneshot marks `/data` copy-on-write-exempt (`chattr +C`) before the node starts, since
+block files are rewritten in place and fragment badly under btrfs. It is a no-op on filesystems
+without the attribute.
 
 ## Installation and First-Run Flow
 
-On first install, Flowee generates random RPC credentials and writes a default `flowee.conf`.
-The node begins syncing the full BCH blockchain from genesis (Flowee has its own UTXO format, not compatible with BCHN).
+1. StartOS builds the image, compiling the Hub from source.
+2. Init seeds `flowee.conf` and `store.json` with their defaults: mainnet, REST off, Tor off, no
+   advertised address.
+3. `hub` starts and begins its initial block download. It has no setup wizard and no credential to
+   set — the node is usable as soon as it answers RPC.
+4. `indexer` starts alongside it and follows the chain, building the transaction index as blocks
+   land rather than waiting for the sync to finish.
+5. When the chain catches up, the package posts a "Sync Complete" notification.
 
 ## Configuration Management
 
-Configuration is stored in `flowee.conf` (INI format). Editable through the StartOS Settings actions:
+| StartOS-managed                                                                                                                             | Upstream-managed                                             |
+| ------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| Everything reachable through the actions below, plus the enforced values: `server`, `listen`, `rpcbind`, `rpcallowip`, `apibind`, thin blocks | Any key you add to `flowee.conf` that the package does not own |
 
-- **Network** — Select mainnet, testnet3, testnet4, scalenet, chipnet, or regtest
-- REST API toggle
-- Maximum connections
-- Manual peer list (addnode)
-- Mempool size, relay fee, expiry, max orphan transactions
-- Block size accept limit
-- RPC thread count
+`flowee.conf` is a file model: the package rewrites the keys it owns on every change and leaves
+every other key in place, so hand-added settings survive. The network selection, the RPC and peer
+ports, and the reindex flag are passed as daemon arguments rather than written to the file, so one
+data directory can hold several networks.
 
 ## Network Access and Interfaces
 
-Ports adjust automatically when a different network is selected.
+| Interface           | Container port | Protocol        | Purpose                                                        |
+| ------------------- | -------------- | --------------- | -------------------------------------------------------------- |
+| RPC                 | 8332           | HTTP (JSON-RPC) | Wallets, explorers and dependent services                      |
+| Peer                | 8333           | TCP             | Bitcoin Cash peer-to-peer                                      |
+| Flowee API          | 1235           | TCP (binary)    | Flowee's own protocol; the indexer follows the chain through it |
+| Transaction Indexer | 1234           | TCP (binary)    | Transaction and address lookups against the built index         |
 
-| Network  | RPC Port | P2P Port |
-|----------|----------|----------|
-| mainnet  | 8332     | 8333     |
-| testnet3 | 18332    | 18333    |
-| testnet4 | 28342    | 28343    |
-| scalenet | 38332    | 38333    |
-| chipnet  | 48332    | 48333    |
-| regtest  | 18443    | 18444    |
-
-| Interface   | Port | Protocol | Description                          |
-|-------------|------|----------|--------------------------------------|
-| RPC         | 8332 | HTTP     | JSON-RPC commands (mainnet default)  |
-| Peer (P2P)  | 8333 | TCP      | Bitcoin Cash peer-to-peer network    |
-| Flowee API  | 1235 | HTTP     | Native Flowee protobuf API           |
+The Hub defaults to a different port pair per network, but only one network runs in this container
+at a time, so the package pins the mainnet pair for all of them. A network switch therefore does
+not move any port: nothing connected to Flowee has to be repointed, and the bindings never churn.
 
 ## Actions (StartOS UI)
 
-| Action                  | Group         | Description                                     |
-|-------------------------|---------------|-------------------------------------------------|
-| Node Info               | —             | Display version, sync status, peer count        |
-| Network                 | Configuration | Select BCH network (mainnet/testnets)           |
-| Node Settings           | Configuration | Configure REST API and block size limit         |
-| RPC & Peers Settings    | Configuration | Tune connections, onlynet, buffers              |
-| Mempool & Block Policy  | Configuration | Mempool size, relay fee, expiry, orphan limit   |
-| View RPC Credentials    | Credentials   | Show RPC username, password, port               |
-| Generate RPC Credential | Credentials   | Create a new named RPC credential               |
-| Delete RPC Credentials  | Credentials   | Remove RPC credentials                          |
-| Reindex Blockchain      | Maintenance   | Re-verify all blocks from genesis               |
-| Delete Peer List        | Maintenance   | Remove peers.dat, rebuild from DNS seeds        |
-| Delete Test Network Data| Maintenance   | Free disk space for selected test networks      |
-| Delete Transaction Index| Maintenance   | Remove indexer DB, force rebuild on next start  |
-| Auto-Configure          | (hidden)      | Used by dependent packages                      |
+| Action                                    | Group         | Availability | Purpose                                                                             |
+| ----------------------------------------- | ------------- | ------------ | ----------------------------------------------------------------------------------- |
+| Node Info                                 | —             | Running      | Version, chain, peer count and sync progress, read over RPC                         |
+| Network                                   | Configuration | Any          | Choose the network; restarts the node                                               |
+| Node Settings                             | Configuration | Any          | Block size accept limit and the optional REST API                                   |
+| Peer & Privacy Settings                   | Configuration | Any          | Allowed networks, connection limits, buffers, address advertisement, Tor proxying   |
+| Mempool Settings                          | Configuration | Any          | Mempool size and expiry, relay fee, orphan retention                                |
+| Generate RPC Credential                   | Credentials   | Any          | Creates an `rpcauth` entry and returns the password once                            |
+| Delete RPC Credentials                    | Credentials   | Any          | Revokes selected `rpcauth` entries; disabled when there are none                    |
+| Reindex Blockchain                        | Maintenance   | Any          | Rebuilds the UTXO database from the stored blocks and restarts                      |
+| Delete Peer List                          | Maintenance   | Stopped      | Removes `peers.dat` on every network                                                |
+| Delete Transaction Index                  | Maintenance   | Stopped      | Removes `txindex/`; rebuilt on next start                                           |
+| Delete Test Network Data                  | Maintenance   | Stopped      | Removes chain data for selected test networks; refuses the active one               |
+| Auto-Configure                            | hidden        | Any          | Applies configuration a dependent service asked for via a task                       |
+| Create RPC Credential For A Dependent     | hidden        | Any          | Registers an `rpcauth` entry for credentials a dependent already holds               |
+
+### Credentials
+
+The Hub accepts one plaintext `rpcuser`/`rpcpassword` pair but any number of hashed `rpcauth`
+entries, so the package uses `rpcauth` exclusively. Two consequences:
+
+- Only the hash is stored, so a password is shown once at creation and cannot be recovered. Losing
+  it means deleting the credential and generating a new one.
+- With no plaintext password set, the Hub writes a `.cookie` file, which is how the package's own
+  `hub-cli` calls authenticate. This is why nothing in the package needs a stored password.
+
+New and deleted credentials take effect when the node restarts.
 
 ## Backups and Restore
 
-Included in backup: `main` volume (excluding blocks, chainstate, indexes, peers.dat, banlist.dat).
-Restore overwrites configuration; blockchain must be re-synced.
+The `main` volume is backed up, minus everything that can be re-derived: `blocks/`, `unspent/`,
+`txindex/`, `peers.dat`, `banlist.dat`, `hub.log`, `.lock` and `.cookie`. The patterns are
+unanchored, so a test network's copies are excluded too.
+
+What survives a restore is the configuration and the RPC credentials. The chain is re-downloaded
+and the transaction index rebuilt, which takes as long as the original sync.
 
 ## Health Checks
 
-| Check             | Display            | Description                              |
-|-------------------|--------------------|------------------------------------------|
-| RPC Ready         | RPC                | hub-cli getrpcinfo succeeds              |
-| Blockchain Sync   | Blockchain Sync    | Progress percentage or "Synced"          |
-| Peer Connections  | Peer Connections   | Number and direction of peer connections |
+| Check               | Method                                          | Reports                                                                    |
+| ------------------- | ----------------------------------------------- | -------------------------------------------------------------------------- |
+| RPC                 | `hub-cli getblockchaininfo`                     | Whether the node answers RPC — the readiness gate for everything else       |
+| Flowee API          | Port 1235 listening                             | Whether the binary API is accepting connections                            |
+| Blockchain Sync     | `hub-cli getblockchaininfo`                     | Percentage while syncing, then fully synced                                |
+| Peer Connections    | `hub-cli getpeerinfo`                           | Outbound and inbound peer counts; loading below three peers                |
+| Tor                 | Package status of `tor`                         | Disabled unless peer traffic is routed through Tor, then whether it is up  |
+| Clearnet            | `externalip` in the config                      | Whether inbound is possible, or outbound only                              |
+| Transaction Indexer | The indexer's log plus the node's chain tip      | Indexed height against the tip, or up to date                              |
+
+The sync and indexer checks fall back to a five-second poll while starting or failing, and thirty
+seconds otherwise.
 
 ## Dependencies
 
-None. Flowee is a standalone BCH node.
+### Tor (optional)
 
-## Mining Considerations
+| Field            | Value                                                                                   |
+| ---------------- | --------------------------------------------------------------------------------------- |
+| Package id       | `tor`                                                                                   |
+| Required when    | "Route Peer Traffic Through Tor" is enabled                                             |
+| Required state   | Running                                                                                 |
+| Mounted volumes  | None                                                                                    |
+| Purpose          | SOCKS proxy for outbound peer connections, reached over the LXC bridge                  |
 
-**⚠️ Important for Miners:**
-
-- Flowee uses **SPV-level validation** — it follows the longest proof-of-work chain but does not fully validate every transaction
-- It **should NOT be used as the sole node for block creation** — in theory, an attacker with sufficient PoW could trick it into following an invalid chain
-- Flowee is **excellent as a relay node** for fast block propagation. Deploy at geographically diverse locations to help blocks propagate faster
-- For block creation, use **BCHN** (fully validating) as your primary mining node, with Flowee as a supplementary relay
+Tor is **only** an outbound proxy here — see Limitations. The version floor is declared in
+`startos/dependencies.ts`.
 
 ## Limitations and Differences
 
-1. SPV-level validation only (not full consensus validation)
-2. Own UTXO database format — cannot share chainstate with BCHN
-3. x86_64 only (no ARM builds)
-4. No wallet functionality
-5. No ZMQ support
+1. **No modern onion support.** The Hub's address parser accepts only v2 onion addresses, which
+   Tor removed from the network in 2021. A v3 address in `externalip` fails validation and aborts
+   startup. The package therefore never advertises an onion address, does not offer
+   `onlynet=onion`, and treats Tor purely as an outbound SOCKS proxy that hides the node's IP from
+   peers. Inbound connectivity over Tor is not possible.
+2. **No I2P.** The Hub has no I2P support at all.
+3. **No pruning.** The Hub stores the full chain; there is no equivalent of `prune`.
+4. **RPC credentials cannot be read back.** Only the `rpcauth` hash is kept.
+5. **The two bundled binaries parse arguments differently.** `hub` uses Bitcoin's single-dash
+   parser, `indexer` uses Qt's. This is invisible in normal use but matters to anyone editing the
+   daemon arguments — see `AGENTS.md`.
+6. **`hub-cli`, not `bitcoin-cli`.** The RPC surface is broadly Bitcoin-compatible but is not
+   identical, and the Hub's `getblockchaininfo` derives `initialblockdownload` from header lag
+   rather than from a sync state machine.
+7. **The UTXO database is Flowee's own format.** It cannot be seeded from a BCHN chainstate; a
+   fresh install syncs from genesis.
+
+## What Is Unchanged from Upstream
+
+- All Bitcoin Cash consensus rules and the peer-to-peer protocol
+- Thin-block propagation
+- The JSON-RPC surface and `hub-cli`
+- Flowee's binary API and the indexer's protocol
+- The `flowee.conf` format and every key the package does not set
 
 ## Contributing
 
-Build locally:
+See [AGENTS.md](AGENTS.md).
 
-```bash
-# Install start-cli and npm
-make x86
-# Install to local StartOS
-make install
-```
+---
 
 ## Quick Reference for AI Consumers
 
 ```yaml
 package_id: flowee
-image: built from source (codeberg.org/Flowee/thehub)
-architectures: [x86_64]
+title: Flowee the Hub
+license: GPL-3.0
+upstream_repo: https://codeberg.org/Flowee/thehub
+package_repo: https://github.com/Start9-Community/flowee-the-hub-startos
+image:
+  id: flowee
+  source: dockerBuild
+  build_args: [VERSION, COMMIT]
+architectures:
+  - x86_64
+  - aarch64
 volumes:
   main: /data
 ports:
-  rpc: 8332 (mainnet; adjusts per network)
-  peer: 8333 (mainnet; adjusts per network)
+  rpc: 8332
+  peer: 8333
   api: 1235
-networks: [mainnet, testnet3, testnet4, scalenet, chipnet, regtest]
-dependencies: none
-actions: [runtime-info, network-config, node-settings, rpc-peers-settings, mempool-settings,
-          view-credentials, generate-credential, delete-credentials, reindex,
-          delete-peer-list, delete-test-network-data, delete-transaction-index, autoconfig(hidden)]
+  indexer: 1234
+networks: [mainnet, testnet, testnet4, scalenet, chipnet, regtest]
+ports_vary_by_network: false
+dependencies:
+  - tor
+startos_managed_files:
+  - /data/flowee.conf
+  - /data/store.json
+rpc_auth: rpcauth entries; cookie file for in-package calls
+actions:
+  - runtime-info
+  - network-config
+  - node-settings
+  - peer-settings
+  - mempool-settings
+  - generate-rpc-credential
+  - delete-rpc-credentials
+  - reindex
+  - delete-peer-list
+  - delete-transaction-index
+  - delete-test-network-data
+  - autoconfig
+  - create-dependent-credential
+health_checks:
+  - primary
+  - flowee-api
+  - sync-progress
+  - peer-connections
+  - tor
+  - clearnet
+  - indexer
+backup_volumes:
+  - main
+backup_excludes:
+  - blocks/
+  - unspent/
+  - txindex/
+  - peers.dat
+  - banlist.dat
+  - hub.log
+  - .lock
+  - .cookie
 ```
