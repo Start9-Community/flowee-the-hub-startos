@@ -67,7 +67,7 @@ export const deleteTestNetworkData = sdk.Action.withInput(
       mainMounts,
       'delete-test-network-data',
       (sub) =>
-        sub.exec(
+        sub.execFail(
           [
             'rm',
             '-rf',

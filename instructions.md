@@ -72,6 +72,8 @@ network you are currently on.
 
 ### Maintenance
 
+Deleting the transaction index or test network data can take time on a large data directory; these actions wait for deletion to finish. All deletion actions report an error if deletion fails rather than reporting success.
+
 - **Node Info** shows the version, chain, peer count and sync progress at a glance.
 - **Reindex Blockchain** re-verifies every block you already have. Run it if the node reports a
   corrupt database. It takes hours.
