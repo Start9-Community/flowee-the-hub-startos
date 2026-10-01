@@ -26,11 +26,11 @@ export const deleteTransactionIndex = sdk.Action.withoutInput(
       'delete-transaction-index',
       // Every network keeps its own index beside its chain data.
       (sub) =>
-        sub.exec([
-          'sh',
-          '-c',
-          `rm -rf ${rootDir}/txindex ${rootDir}/*/txindex`,
-        ]),
+        sub.execFail(
+          ['sh', '-c', `rm -rf ${rootDir}/txindex ${rootDir}/*/txindex`],
+          undefined,
+          null,
+        ),
     )
 
     return {

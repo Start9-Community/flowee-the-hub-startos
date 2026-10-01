@@ -67,11 +67,15 @@ export const deleteTestNetworkData = sdk.Action.withInput(
       mainMounts,
       'delete-test-network-data',
       (sub) =>
-        sub.exec([
-          'rm',
-          '-rf',
-          ...input.networks.map((n) => `${rootDir}/${networkSubdir[n]}`),
-        ]),
+        sub.execFail(
+          [
+            'rm',
+            '-rf',
+            ...input.networks.map((n) => `${rootDir}/${networkSubdir[n]}`),
+          ],
+          undefined,
+          null,
+        ),
     )
 
     return {

@@ -154,6 +154,8 @@ Removes previously generated credentials.
 
 ### Maintenance
 
+All three deletion actions report an error if the delete command fails. Transaction-index and test-network deletions have no time limit; deleting the peer list retains the 30-second limit.
+
 #### Reindex
 
 Rebuilds the node's indexes from the block files. Hours of work.

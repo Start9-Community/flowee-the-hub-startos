@@ -25,7 +25,7 @@ export const deletePeerList = sdk.Action.withoutInput(
       // Every network keeps its own copy, and the user is deleting the concept
       // rather than one network's list.
       (sub) =>
-        sub.exec([
+        sub.execFail([
           'sh',
           '-c',
           `rm -f ${rootDir}/peers.dat ${rootDir}/*/peers.dat`,
