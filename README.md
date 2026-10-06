@@ -174,9 +174,9 @@ Removes a test network's directory. **Contained by design** — mainnet lives el
 
 ### Information
 
-#### Runtime Information
+#### Node Info
 
-Reports the node's chain, peers and version.
+Reports the node's version, peer count, chain, verified blocks against received headers, and sync progress, each in its own field.
 
 ### Hidden
 

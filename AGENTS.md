@@ -18,19 +18,23 @@ Freshly scaffolded? Work the
 guide page, not a file in this repo — read it, don't copy it in.
 
 Keep `README.md` (technical reference for an AI support or administering agent) and
-`instructions.md` (end-user docs) in sync with your changes.
+`instructions.md` (end-user docs) in sync with your changes. This file restates neither:
+whoever changes the package has both, so it carries only what they don't — repo mechanics,
+a change that looks right and is not, where the next thing gets added, a naming trap, a
+build or test invocation particular to this repo.
 
-**Bugs and feature requests are GitHub issues on this repo** — file them as you find them.
+**Fix a defect you spot rather than reporting it** — you have the package open and the
+context to be sure. File **a GitHub issue on this repo** only when the call isn't yours to
+make: you can't pin the cause down, two defensible fixes exist, or it's too large to ride on
+the work in hand. An open issue is a report, not a queue — implement one when you're asked
+to or when it's labelled `Approved`, then close it with `Closes #<n>`.
+
 Don't record work in the repo instead: no `TODO.md`, no `NOTES.md`, no `PLAN.md`. What you
 verified, tried, and decided belongs in the commit message and the PR body.
 
 ## This repo
 
-- **The `indexer` binary parses its arguments with Qt, the Hub with Bitcoin's own parser.** Qt reads `-datadir=/data` as the short option `-d` carrying the value `atadir=/data`, and then indexes into that relative path — outside the volume, so the index is silently lost on every restart. The indexer needs `--datadir=`; the Hub needs `-datadir=`. Do not "normalize" them. The indexer also has no notion of networks, so it is pointed at the Hub's directory for the active one rather than replaying every chain into one index.
-- **The Hub predates v3 onion addresses.** `CNetAddr::SetSpecial` accepts only the 16-character v2 form, and a v3 address in `externalip` fails `IsValid()`, which aborts startup. Never write an onion address into the config, and do not offer `onlynet=onion` — Tor is usable here only as an outbound SOCKS proxy.
-- **Credentials are `rpcauth` entries, never `rpcuser`/`rpcpassword`.** Leaving the password unset is what makes the Hub write `.cookie`, which is how the package's own `hub-cli` calls authenticate. Writing a plaintext password would break that and cap the node at one credential.
-- **`create-dependent-credential` is a dependent-facing API.** Because the Hub stores only a hash and can never hand a password back, dependents (bch-asicseer, bch-elopool, bch-explorer) mint their own and call this action to register it. Keep its id and input shape stable, and never build a flow that expects to read a password out of the Hub.
-- **`hub-cli` needs the network flag.** It is what tells the CLI which subdirectory holds the auth cookie, so leaving it off makes every call fail authorization on anything but mainnet.
-- **Node ports are pinned to the mainnet pair on every network.** Only one network runs per container, so nothing has to be repointed after a switch and the bindings never churn.
-- **`sigtermTimeout: 300_000` on the node is deliberate** — a chainstate flush can take minutes, and cutting it short corrupts the database.
-- **The indexer's health check parses its log because that is its only output.** It logs the height it resumed from on connecting to the Hub, then each block it replays; there is no RPC to ask.
+- **Don't "normalize" the indexer's `--datadir=` to the Hub's `-datadir=`.** The indexer parses arguments with Qt, which reads `-datadir=X` as `-d atadir=X` and silently indexes outside the volume.
+- **Never write an onion address into `flowee.conf`, and don't offer `onlynet=onion`.** The Hub accepts only v2 onions; a v3 one in `externalip` aborts startup.
+- **Never write `rpcuser`/`rpcpassword`.** Credentials are `rpcauth` entries; an unset password is what makes the Hub write the `.cookie` the package's own `hub-cli` calls use.
+- **Dependent packages import this repo from `#next`** — `rpcHostId` and `rpcPort` from `startos/utils.ts`, and `createDependentCredential` from `startos/actions/credentials/dependentCredential.ts`. Don't rename or move those exports, and keep the `create-dependent-credential` action id and input shape stable.

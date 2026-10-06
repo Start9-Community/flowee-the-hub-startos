@@ -10,7 +10,7 @@ export const networkConfig = sdk.Action.withInput(
   async () => ({
     name: i18n('Network'),
     description: i18n(
-      'Choose which Bitcoin Cash network the node joins. Each network keeps its own chain data and its own RPC and peer ports.',
+      'Choose which Bitcoin Cash network the node joins. Each network keeps its own chain data.',
     ),
     warning: i18n(
       'Flowee restarts and begins syncing the chosen network from the beginning. Data for the network you are leaving is kept.',
@@ -23,7 +23,9 @@ export const networkConfig = sdk.Action.withInput(
   InputSpec.of({
     network: Value.select({
       name: i18n('Network'),
-      description: i18n('The network to join.'),
+      description: i18n(
+        '- Mainnet: the real Bitcoin Cash network, where coins have value\n- Testnet3: the original public test network; its coins have no value\n- Testnet4: a newer public test network; its coins have no value\n- Scalenet: a public test network for very large blocks\n- Chipnet: a public test network that activates upcoming network upgrades before mainnet\n- Regtest: a private chain on this server alone, for development',
+      ),
       values: {
         mainnet: i18n('Mainnet'),
         testnet: i18n('Testnet3'),

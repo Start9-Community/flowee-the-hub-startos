@@ -2,7 +2,7 @@ import { FileHelper, z } from '@start9labs/start-sdk'
 import { sdk } from '../sdk'
 import { NETWORKS } from '../utils'
 
-export const shape = z.object({
+export const shape = z.looseObject({
   network: z.enum(NETWORKS).catch('mainnet'),
   reindex: z.boolean().catch(false),
   fullySynced: z.boolean().catch(false),
