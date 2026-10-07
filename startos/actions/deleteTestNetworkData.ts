@@ -30,7 +30,9 @@ export const deleteTestNetworkData = sdk.Action.withInput(
   InputSpec.of({
     networks: Value.multiselect({
       name: i18n('Networks'),
-      description: i18n('The test networks whose data should be deleted.'),
+      description: i18n(
+        'Pick every network whose chain data you no longer need. The network Flowee is set to is refused; switch networks first.',
+      ),
       default: [],
       values: TEST_NETWORKS,
     }),
@@ -73,8 +75,7 @@ export const deleteTestNetworkData = sdk.Action.withInput(
             '-rf',
             ...input.networks.map((n) => `${rootDir}/${networkSubdir[n]}`),
           ],
-          undefined,
-          null,
+          { timeout: null },
         ),
     )
 

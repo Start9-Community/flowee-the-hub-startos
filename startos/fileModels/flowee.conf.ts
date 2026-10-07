@@ -34,57 +34,55 @@ const iniBoolean = z
   .optional()
   .catch(undefined)
 
-export const shape = z
-  .object({
-    // RPC. The hub falls back to cookie auth whenever rpcpassword is empty,
-    // which is how the package's own hub-cli calls authenticate; user and
-    // dependent credentials are hashed rpcauth entries.
-    rpcuser: z.undefined().optional().catch(undefined),
-    rpcpassword: z.undefined().optional().catch(undefined),
-    rpcauth: iniStringArray,
-    server: z.literal(true).catch(true),
-    rpcbind: iniString,
-    rpcallowip: iniString,
-    rpcport: iniNumber,
-    rpcthreads: iniNumber,
-    rest: iniBoolean,
-    // Connection
-    listen: iniBoolean,
-    maxconnections: iniNumber,
-    addnode: iniStringArray,
-    onlynet: iniStringArray,
-    externalip: iniStringArray,
-    port: iniNumber,
-    maxreceivebuffer: iniNumber,
-    maxsendbuffer: iniNumber,
-    maxuploadtarget: iniNumber,
-    // Relay
-    minrelaytxfee: iniNumber,
-    maxmempool: iniNumber,
-    mempoolexpiry: iniNumber,
-    maxorphantx: iniNumber,
-    datacarrier: iniBoolean,
-    datacarriersize: iniNumber,
-    blocksizeacceptlimit: iniNumber,
-    blockmaxsize: iniNumber,
-    // Flowee's own binary API
-    apibind: iniString,
-    api_max_addresses: iniNumber,
-    api_connection_per_ip: iniNumber,
-    // Thin blocks
-    'use-thinblocks': iniBoolean,
-    'min-thin-peers': iniNumber,
-    // Keys the package must never leave in the file: the Tor arguments are
-    // passed on the command line, and apilisten is the name apibind had before
-    // upstream renamed it. Declaring them undefined is what removes them —
-    // whatever is on disk parses to undefined and the next write omits it.
-    proxy: z.undefined().optional().catch(undefined),
-    onion: z.undefined().optional().catch(undefined),
-    listenonion: z.undefined().optional().catch(undefined),
-    proxyrandomize: z.undefined().optional().catch(undefined),
-    apilisten: z.undefined().optional().catch(undefined),
-  })
-  .loose()
+export const shape = z.looseObject({
+  // RPC. The hub falls back to cookie auth whenever rpcpassword is empty,
+  // which is how the package's own hub-cli calls authenticate; user and
+  // dependent credentials are hashed rpcauth entries.
+  rpcuser: z.undefined().optional().catch(undefined),
+  rpcpassword: z.undefined().optional().catch(undefined),
+  rpcauth: iniStringArray,
+  server: z.literal(true).catch(true),
+  rpcbind: iniString,
+  rpcallowip: iniString,
+  rpcport: iniNumber,
+  rpcthreads: iniNumber,
+  rest: iniBoolean,
+  // Connection
+  listen: iniBoolean,
+  maxconnections: iniNumber,
+  addnode: iniStringArray,
+  onlynet: iniStringArray,
+  externalip: iniStringArray,
+  port: iniNumber,
+  maxreceivebuffer: iniNumber,
+  maxsendbuffer: iniNumber,
+  maxuploadtarget: iniNumber,
+  // Relay
+  minrelaytxfee: iniNumber,
+  maxmempool: iniNumber,
+  mempoolexpiry: iniNumber,
+  maxorphantx: iniNumber,
+  datacarrier: iniBoolean,
+  datacarriersize: iniNumber,
+  blocksizeacceptlimit: iniNumber,
+  blockmaxsize: iniNumber,
+  // Flowee's own binary API
+  apibind: iniString,
+  api_max_addresses: iniNumber,
+  api_connection_per_ip: iniNumber,
+  // Thin blocks
+  'use-thinblocks': iniBoolean,
+  'min-thin-peers': iniNumber,
+  // Keys the package must never leave in the file: the Tor arguments are
+  // passed on the command line, and apilisten is the name apibind had before
+  // upstream renamed it. Declaring them undefined is what removes them —
+  // whatever is on disk parses to undefined and the next write omits it.
+  proxy: z.undefined().optional().catch(undefined),
+  onion: z.undefined().optional().catch(undefined),
+  listenonion: z.undefined().optional().catch(undefined),
+  proxyrandomize: z.undefined().optional().catch(undefined),
+  apilisten: z.undefined().optional().catch(undefined),
+})
 
 function stringifyPrimitives(a: unknown): unknown {
   if (a && typeof a === 'object') {
@@ -164,14 +162,14 @@ export const fullConfigSpec = InputSpec.of({
   onlynet: Value.multiselect({
     name: i18n('Allowed Networks'),
     description: i18n(
-      'Networks the node may connect out over. Leave both selected to allow either.',
+      'Networks the node may connect out over. Leave both selected to allow either.\n- IPv4: connect to peers at IPv4 addresses\n- IPv6: connect to peers at IPv6 addresses',
     ),
     default: ALL_ONLYNETS,
     values: ONLYNET_VALUES,
   }),
   maxconnections: Value.number({
     name: i18n('Maximum Connections'),
-    description: i18n('Upper bound on simultaneous peer connections.'),
+    description: null,
     default: 125,
     required: false,
     min: 8,

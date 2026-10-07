@@ -1,3 +1,4 @@
+import { T } from '@start9labs/start-sdk'
 import { storeJson } from '../fileModels/store.json'
 import { i18n } from '../i18n'
 import { sdk } from '../sdk'
@@ -48,32 +49,52 @@ export const runtimeInfo = sdk.Action.withoutInput(
           call<GetBlockchainInfo>('getblockchaininfo'),
         ])
 
-        const lines: string[] = []
-        if (net) {
-          lines.push(`${i18n('Version')}: ${net.subversion}`)
-          lines.push(`${i18n('Peers')}: ${net.connections}`)
-        }
-        if (chain) {
-          lines.push(`${i18n('Chain')}: ${chain.chain}`)
-          lines.push(`${i18n('Blocks')}: ${chain.blocks} / ${chain.headers}`)
-          lines.push(
-            `${i18n('Sync')}: ${(chain.verificationprogress * 100).toFixed(2)}%`,
-          )
-        }
+        const single = (
+          name: string,
+          value: string,
+          description: string | null = null,
+        ): T.ActionResultMember => ({
+          type: 'single',
+          name,
+          description,
+          value,
+        })
+
+        const value = [
+          ...(net
+            ? [
+                single(i18n('Version'), net.subversion),
+                single(i18n('Peers'), String(net.connections)),
+              ]
+            : []),
+          ...(chain
+            ? [
+                single(i18n('Chain'), chain.chain),
+                single(
+                  i18n('Blocks'),
+                  `${chain.blocks} / ${chain.headers}`,
+                  i18n(
+                    'Blocks the node has verified, out of the block headers it has received',
+                  ),
+                ),
+                single(
+                  i18n('Sync'),
+                  `${(chain.verificationprogress * 100).toFixed(2)}%`,
+                  i18n(
+                    "The node's estimate of how much of the chain it has verified",
+                  ),
+                ),
+              ]
+            : []),
+        ]
 
         return {
           version: '1',
           title: i18n('Node Info'),
-          message: null,
-          result: {
-            type: 'single',
-            value: lines.length
-              ? lines.join('\n')
-              : i18n('The node is not answering RPC calls yet.'),
-            copyable: false,
-            qr: false,
-            masked: false,
-          },
+          message: value.length
+            ? null
+            : i18n('The node is not answering RPC calls yet.'),
+          result: value.length ? { type: 'group', value } : null,
         }
       },
     )

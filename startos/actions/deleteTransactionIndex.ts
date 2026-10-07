@@ -28,8 +28,7 @@ export const deleteTransactionIndex = sdk.Action.withoutInput(
       (sub) =>
         sub.execFail(
           ['sh', '-c', `rm -rf ${rootDir}/txindex ${rootDir}/*/txindex`],
-          undefined,
-          null,
+          { timeout: null },
         ),
     )
 

@@ -13,9 +13,9 @@ const dict = {
 
   // actions/config/network.ts
   Network: 6,
-  'Choose which Bitcoin Cash network the node joins. Each network keeps its own chain data and its own RPC and peer ports.': 7,
+  'Choose which Bitcoin Cash network the node joins. Each network keeps its own chain data.': 7,
   'Flowee restarts and begins syncing the chosen network from the beginning. Data for the network you are leaving is kept.': 8,
-  'The network to join.': 9,
+  '- Mainnet: the real Bitcoin Cash network, where coins have value\n- Testnet3: the original public test network; its coins have no value\n- Testnet4: a newer public test network; its coins have no value\n- Scalenet: a public test network for very large blocks\n- Chipnet: a public test network that activates upcoming network upgrades before mainnet\n- Regtest: a private chain on this server alone, for development': 9,
   Mainnet: 10,
   Testnet3: 11,
   Testnet4: 12,
@@ -77,7 +77,7 @@ const dict = {
   'Reclaim the disk a test network is using. Mainnet data is never touched.': 54,
   'The chain data for the networks you pick is deleted.': 55,
   Networks: 56,
-  'The test networks whose data should be deleted.': 57,
+  'Pick every network whose chain data you no longer need. The network Flowee is set to is refused; switch networks first.': 57,
   'No data was deleted.': 58,
   'Cannot Delete The Active Network': 59,
   'Flowee is set to ${network}. Switch networks before deleting its data.': 60,
@@ -105,6 +105,8 @@ const dict = {
   Blocks: 76,
   Sync: 77,
   'The node is not answering RPC calls yet.': 78,
+  'Blocks the node has verified, out of the block headers it has received': 145,
+  "The node's estimate of how much of the chain it has verified": 146,
 
   // fileModels/flowee.conf.ts
   'REST API': 79,
@@ -118,9 +120,8 @@ const dict = {
   'Advertise Public Address': 87,
   'Tell peers the public IPv4 and IPv6 addresses StartOS has assigned to the peer interface, so they can connect back to you. Addresses on a network you have excluded below are never advertised.': 88,
   'Allowed Networks': 89,
-  'Networks the node may connect out over. Leave both selected to allow either.': 90,
+  'Networks the node may connect out over. Leave both selected to allow either.\n- IPv4: connect to peers at IPv4 addresses\n- IPv6: connect to peers at IPv6 addresses': 90,
   'Maximum Connections': 91,
-  'Upper bound on simultaneous peer connections.': 92,
   'Add Peers': 93,
   'Peers to always stay connected to, as address or address:port.': 94,
   'Max Upload Target': 95,

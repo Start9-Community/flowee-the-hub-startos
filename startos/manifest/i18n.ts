@@ -21,13 +21,13 @@ export const long = {
 
 export const torDescription = {
   en_US:
-    'Required to reach .onion peers, and whenever Tor is the only allowed network or all peer traffic is routed through it.',
+    'Needed only when Route Peer Traffic Through Tor is on: every outbound peer connection then goes through its SOCKS proxy.',
   es_ES:
-    'Necesario para conectar con pares .onion, y siempre que Tor sea la única red permitida o todo el tráfico de pares se enrute a través de él.',
+    'Solo es necesario cuando «Enrutar el tráfico de pares por Tor» está activado: todas las conexiones salientes a pares pasan entonces por su proxy SOCKS.',
   de_DE:
-    'Erforderlich, um .onion-Peers zu erreichen, sowie immer dann, wenn Tor das einzige erlaubte Netzwerk ist oder der gesamte Peer-Verkehr darüber läuft.',
+    'Nur nötig, wenn „Peer-Verkehr über Tor leiten“ aktiviert ist: Jede ausgehende Peer-Verbindung läuft dann über seinen SOCKS-Proxy.',
   pl_PL:
-    'Wymagany do łączenia się z peerami .onion oraz zawsze, gdy Tor jest jedyną dozwoloną siecią lub cały ruch do peerów jest przez niego kierowany.',
+    'Potrzebny tylko, gdy włączona jest opcja „Kieruj ruch do peerów przez Tor”: każde wychodzące połączenie z peerem przechodzi wtedy przez jego proxy SOCKS.',
   fr_FR:
-    'Requis pour joindre les pairs .onion, ainsi que lorsque Tor est le seul réseau autorisé ou que tout le trafic entre pairs passe par lui.',
+    'Nécessaire uniquement lorsque « Faire passer le trafic entre pairs par Tor » est activé : chaque connexion sortante vers un pair passe alors par son proxy SOCKS.',
 }
