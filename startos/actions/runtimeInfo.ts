@@ -58,6 +58,10 @@ export const runtimeInfo = sdk.Action.withoutInput(
           name,
           description,
           value,
+          copyable: false,
+          qr: false,
+          masked: false,
+          launchable: false,
         })
 
         const value = [

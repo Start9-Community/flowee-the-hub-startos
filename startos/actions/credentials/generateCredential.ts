@@ -74,6 +74,7 @@ export const generateRpcCredential = sdk.Action.withInput(
         value: `${input.username}:${password}`,
         copyable: true,
         qr: false,
+        launchable: false,
         masked: true,
       },
     }
