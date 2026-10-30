@@ -62,6 +62,8 @@ network you are currently on.
   interface, so they can connect to you. Leave it off if you only want outbound connections.
 - **Allowed Networks** limits the node to IPv4 or IPv6.
 
+If you publish the **Peer** interface through StartTunnel to keep your home IP private, send Flowee's outbound traffic through that tunnel too. Connections Flowee opens itself to other nodes otherwise leave through your home router, so those peers see your home IP. While Flowee routes its peer traffic through Tor, this doesn't apply. If you use the tunnel for another reason, such as a port your router can't forward, there is nothing to change.
+
 ### Other settings
 
 - **Node Settings** — the largest block the node will accept, and an optional read-only REST API.
