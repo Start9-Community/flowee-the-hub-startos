@@ -1,16 +1,18 @@
 import { IMPOSSIBLE, VersionInfo } from '@start9labs/start-sdk'
 
 export const current = VersionInfo.of({
-  version: '2026.5.2:16',
+  version: '2026.5.2:17',
   releaseNotes: {
-    en_US: 'A failing Tor health check is retried every 30 seconds.',
+    en_US:
+      'The instructions cover keeping your home IP private when you publish Flowee through StartTunnel.',
     es_ES:
-      'Una comprobación de estado de Tor fallida se reintenta cada 30 segundos.',
+      'Las instrucciones explican cómo mantener privada tu IP doméstica cuando publicas Flowee a través de StartTunnel.',
     de_DE:
-      'Eine fehlgeschlagene Tor-Statusprüfung wird alle 30 Sekunden wiederholt.',
-    pl_PL: 'Nieudana kontrola stanu Tor jest ponawiana co 30 sekund.',
+      'Die Anleitung erklärt, wie Ihre Heim-IP-Adresse privat bleibt, wenn Sie Flowee über StartTunnel veröffentlichen.',
+    pl_PL:
+      'Instrukcje wyjaśniają, jak zachować prywatność domowego adresu IP, gdy publikujesz Flowee przez StartTunnel.',
     fr_FR:
-      "Une vérification d'état Tor en échec est relancée toutes les 30 secondes.",
+      'Les instructions expliquent comment garder votre IP personnelle privée lorsque vous publiez Flowee via StartTunnel.',
   },
   migrations: {
     up: async ({ effects }) => {},
