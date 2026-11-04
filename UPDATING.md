@@ -28,7 +28,6 @@ curl -s 'https://codeberg.org/api/v1/repos/Flowee/thehub/tags?limit=20' \
 
 1. Set both `VERSION` and `COMMIT` in `startos/manifest/index.ts` to the new tag and its commit.
 2. Set `version` in `startos/versions/current.ts` to `<upstream>:0`, dropping the leading zero
-   from the month — upstream `2026.05.2` is ExVer `2026.5.2`. Rewrite `releaseNotes` for all five
-   locales.
-3. Rebuild (`make x86`) and install. The build takes a few minutes; a compile failure after a bump
-   usually means a new dependency, which goes in the builder stage of `Dockerfile`.
+   from the month — upstream `2026.05.2` is ExVer `2026.5.2`.
+3. A compile failure after a bump usually means a new dependency, which goes in the builder stage
+   of `Dockerfile`.
