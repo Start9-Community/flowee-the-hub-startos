@@ -16,8 +16,7 @@ export const manifest = setupManifest({
       source: {
         dockerBuild: {
           buildArgs: {
-            // Upstream tag 2026.05.2, resolved to its immutable commit. Both
-            // move together — see UPDATING.md.
+            // The build fails unless VERSION resolves to COMMIT — see UPDATING.md.
             VERSION: '2026.05.2',
             COMMIT: 'd19571fcb5700d790a57be3b4035ddd3f75e9e10',
           },

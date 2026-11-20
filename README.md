@@ -47,7 +47,7 @@ One image, **compiled from upstream source**.
 | ------------ | ----------------------------------------------------- |
 | `flowee-sub` | Both daemons and the oneshot — the one to `attach` to |
 
-**Upstream publishes neither binaries nor an image**, so the build downloads a source tarball. It is pinned by **both a version tag and the immutable commit that tag resolved to**, which move together — a tag alone would let the contents change underneath the pin.
+**Upstream publishes neither binaries nor an image**, so the build clones the source at a release tag and checks out the commit that tag resolved to. It is pinned by **both the tag and the commit**, which move together: git verifies the checkout against the commit hash, and the build fails if the tag no longer points to it.
 
 A oneshot runs first, marking the data directory `nodatacow`: block files are written sequentially and rewritten in place, which fragments badly under copy-on-write. It fails harmlessly on filesystems that have no such attribute.
 
@@ -233,7 +233,7 @@ What the backup keeps is what the network cannot give back: the configuration an
 5. **Dependents must register their own credential**, since none can be read back out.
 6. **The node's ports are pinned to the mainnet pair on every network**, deliberately.
 7. **The indexer is a second full pass** over the chain, and it reports only through its log.
-8. **Built from a source tarball**, pinned by tag and commit; there is no upstream image to fall back on.
+8. **Built from a git checkout of the source**, pinned by tag and commit; there is no upstream image to fall back on.
 
 ---
 
@@ -241,7 +241,7 @@ What the backup keeps is what the network cannot give back: the configuration an
 
 ```yaml
 package_id: flowee # note: the repo is flowee-the-hub-startos
-image: built from ./Dockerfile # compiled from a Codeberg tarball, pinned by VERSION + COMMIT
+image: built from ./Dockerfile # compiled from a Codeberg git checkout, pinned by VERSION + COMMIT
 architectures:
   - x86_64
   - aarch64
