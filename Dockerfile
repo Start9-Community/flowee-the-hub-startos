@@ -1,9 +1,9 @@
 # Build stage: compile the Hub, hub-cli and the indexer from upstream source.
 #
 # Upstream publishes no release binaries and no official image, so the package
-# builds them. Codeberg serves a tarball per commit, so COMMIT — not the tag —
-# is what actually pins the source; VERSION is the human-readable tag it came
-# from. Both are set in startos/manifest/index.ts; see UPDATING.md.
+# builds them from a clone of the release tag, checked out at COMMIT. The build
+# fails unless VERSION resolves to COMMIT. Both are set in
+# startos/manifest/index.ts; see UPDATING.md.
 FROM ubuntu:24.04 AS builder
 
 ARG VERSION
@@ -12,7 +12,7 @@ ARG COMMIT
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive \
     apt-get install -y --no-install-recommends \
-    build-essential cmake pkg-config ca-certificates curl \
+    build-essential cmake pkg-config ca-certificates git \
     libssl-dev libevent-dev libminiupnpc-dev \
     libboost-chrono-dev libboost-filesystem-dev libboost-iostreams-dev \
     libboost-program-options-dev libboost-thread-dev \
@@ -20,8 +20,10 @@ RUN apt-get update && \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /src
-RUN curl -fsSL "https://codeberg.org/Flowee/thehub/archive/${COMMIT}.tar.gz" \
-    | tar xz --strip-components=1
+RUN git clone --depth 1 --branch "$VERSION" https://codeberg.org/Flowee/thehub.git . && \
+    git checkout -q --detach "$COMMIT" && \
+    test "$(git rev-parse "refs/tags/$VERSION^{commit}")" = "$COMMIT" && \
+    rm -rf .git
 
 # build_apps=ON is what pulls in the Hub, hub-cli and the indexer; the default
 # build is the Flowee libraries alone.

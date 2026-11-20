@@ -1,6 +1,6 @@
 # Updating the upstream version
 
-This package compiles **Flowee the Hub** from the upstream source tarball. Upstream publishes no
+This package compiles **Flowee the Hub** from a git checkout of the upstream source. Upstream publishes no
 release binaries and no container image, so there is nothing to re-tag — the Dockerfile does the
 build.
 
@@ -13,16 +13,18 @@ curl -s 'https://codeberg.org/api/v1/repos/Flowee/thehub/tags?limit=1' | jq -r '
 ```
 
 The pin lives in `startos/manifest/index.ts` under `images.flowee.source.dockerBuild.buildArgs`,
-as a pair: `VERSION` is the human-readable tag, `COMMIT` is the commit it resolves to. `COMMIT` is
-what the build actually downloads — Codeberg serves an immutable archive per commit, whereas a tag
-can be moved.
+as a pair: `VERSION` is the release tag, `COMMIT` is the full commit SHA it resolves to. The build
+clones the tag, checks out `COMMIT`, and fails unless the tag points to it, so a moved tag breaks
+the build instead of changing what it compiles. Upstream's tags are unsigned, so there is no
+signature to check.
 
 Resolve a tag to its commit with:
 
 ```sh
-curl -s 'https://codeberg.org/api/v1/repos/Flowee/thehub/tags?limit=20' \
-  | jq -r '.[] | select(.name == "<tag>") | .commit.sha'
+git ls-remote https://codeberg.org/Flowee/thehub.git 'refs/tags/<tag>*'
 ```
+
+For an annotated tag the listing has two lines; take the commit from the one ending `^{}`.
 
 ## Applying the bump
 
