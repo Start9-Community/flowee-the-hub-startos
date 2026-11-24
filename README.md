@@ -55,11 +55,12 @@ A oneshot runs first, marking the data directory `nodatacow`: block files are wr
 
 ## Volume and Data Layout
 
-One volume.
+Two volumes: `main` holds the node, and `public` holds only what dependent services read.
 
-| Volume | Mount Point | Purpose                          |
-| ------ | ----------- | -------------------------------- |
-| `main` | `/data`     | The chain, the config, the index |
+| Volume   | Mount Point | Purpose                                           |
+| -------- | ----------- | ------------------------------------------------- |
+| `main`   | `/data`     | The chain, the config, the index                  |
+| `public` | —           | `rpc/rpc.json`, for dependents to mount read-only |
 
 | Path          | Written by  | Holds                           |
 | ------------- | ----------- | ------------------------------- |
@@ -74,14 +75,17 @@ One volume.
 
 ## File Models
 
-Two models.
+Three models.
 
-| File          | Format | Modelled                | Written by |
-| ------------- | ------ | ----------------------- | ---------- |
-| `flowee.conf` | INI    | Yes — `FileHelper.ini`  | Actions    |
-| `store.json`  | JSON   | Yes — `FileHelper.json` | Actions    |
+| File          | Format | Modelled                | Written by              |
+| ------------- | ------ | ----------------------- | ----------------------- |
+| `flowee.conf` | INI    | Yes — `FileHelper.ini`  | Actions                 |
+| `store.json`  | JSON   | Yes — `FileHelper.json` | Actions                 |
+| `rpc.json`    | JSON   | Yes — `FileHelper.json` | Init, from `store.json` |
 
 `flowee.conf` is the node's own configuration — network, peers, mempool policy, and the RPC credentials. The store holds what is not the node's: the selected network and the Tor switches.
+
+**`rpc/rpc.json`** on the `public` volume is a copy of the store's `network` and `fullySynced`, kept current by an init handler that watches `store.json`. Dependents mount `public`'s `rpc/` read-only to learn the chain, so they never see `main` or its `.cookie`; their RPC login is the one each registers through Create Dependent Credential.
 
 **Credentials are hashed `rpcauth` entries, never a plaintext user and password**, and that is load-bearing rather than merely tidier. Leaving the password unset is what makes the node write a `.cookie` file — which is how this package's own command-line calls authenticate. Writing a plaintext password would break those _and_ cap the node at a single credential.
 
@@ -220,7 +224,7 @@ The `main` volume is copied, with everything rebuildable excluded — `sdk.Backu
 
 **The exclusions are deliberately unanchored**, so they match inside a test network's subdirectory as well as at the root.
 
-What the backup keeps is what the network cannot give back: the configuration and the generated RPC credentials.
+What the backup keeps is what the network cannot give back: the configuration and the generated RPC credentials. The `public` volume is not backed up: it is rewritten from `store.json` on every init, restore included.
 
 **A restored node re-syncs from scratch, and re-indexes after that** — two passes, not one. It comes back with the same settings and the same credentials.
 
@@ -249,9 +253,11 @@ subcontainers:
   - flowee-sub # both daemons and the nocow oneshot
 volumes:
   main: /data # test networks live in their own subdirectories; mainnet at the root
+  public: rpc/rpc.json for dependents; not backed up
 file_models:
   - flowee.conf # the node's own config; credentials are hashed rpcauth entries only
   - store.json # network selection and the Tor switches
+  - rpc.json # network and sync state, on public, for dependents
 startos_managed_env_vars: [] # configuration is flowee.conf plus computed CLI args
 dependencies:
   - tor # optional, kind: running, only while the SOCKS proxy is enabled

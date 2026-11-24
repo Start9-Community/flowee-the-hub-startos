@@ -10,7 +10,7 @@ export const manifest = setupManifest({
   marketingUrl: 'https://flowee.org/',
   donationUrl: null,
   description: { short, long },
-  volumes: ['main'],
+  volumes: ['main', 'public'],
   images: {
     flowee: {
       source: {
